@@ -1,4 +1,4 @@
-const {CLIENT_ID, CLIENT_SECRET, PORT} = process.env,
+const {CLIENT_ID=1, CLIENT_SECRET=1, PORT=8090} = process.env,
       SlackStrategy = require('passport-slack').Strategy,
       passport = require('passport'),
       express = require('express'),
@@ -25,5 +25,11 @@ app.get('/auth/slack/callback',
   passport.authorize('slack', { failureRedirect: '/login' }),
   (req, res) => res.redirect('/')
 );
+
+app.post('/', (req, res) =>{
+	if ( req.body && req.body.challenge ) {
+		res.send(req.body.challenge);
+	}
+} );
 
 app.listen(PORT);
