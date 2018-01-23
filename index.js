@@ -2,7 +2,7 @@ const PORT = 8090,
       express = require('express'),
       app = express(),
 	  createCanduit = require('canduit'),
-	  { SlackClient } = require('@slack/client'),
+	  { WebClient:SlackClient } = require('@slack/client'),
 	  slackToken = "xoxp-2155697888-23783382054-302812961136-181d8feb9ef47f690ebe731a0a9abccf", //testing token
 	  slackClient = new SlackClient(slackToken);
 
