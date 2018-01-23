@@ -63,8 +63,8 @@ app.post('/', (req, res) => {
 					unfurl_links: false,
 					attachments: [
 						{
-							"fallback": task.fullname,
-							"title": task.fullname,
+							"fallback": task.fullName,
+							"title": task.fullName,
 							"title_link": task.uri,
 //							"text": "Background After discussing the best way to handle previews when we have an error...",
 //							"image_url": "https://phab.wmfusercontent.org/file/data/s37v4uvxvzwnsdpsmdux/PHID-FILE-vkbuqfcvjokm45fb6a6q/Screen_Shot_2017-12-19_at_6.23.33_PM.png",
