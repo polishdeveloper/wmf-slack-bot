@@ -101,7 +101,7 @@ app.post('/', (req, res) => {
 				}; // end attachment mock
 
 				// See: https://api.slack.com/methods/chat.postMessage
-				slackClient.chat.postMessage(req.body.event.channel, testMessage)
+				slackClient.chat.postMessage(req.body.event.channel, testMessage.text, testMessage.attachments)
 				.then((res) => {
 					// `res` contains information about the posted message
   					console.log('Message sent: ', res);
