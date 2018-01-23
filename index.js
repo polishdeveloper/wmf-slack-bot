@@ -28,12 +28,32 @@ app.get('/auth/slack/callback',
   (req, res) => res.redirect('/')
 );
 
+function lookupPhabIds( text ) {
+	var idMatches = text.match( /t[0-9]+(\#\w+)?/gi );
+	return idMatches;
+}
+
+function lookupGerritIds( text ) {
+	return [];
+}
+function getPhabInfo( ids ) {
+	return new Promise( (resolve, reject ) => {
+
+	} )
+}
+
 app.post('/', (req, res) => {
+	// initial url verification
 	if ( req.body && req.body.challenge ) {
 		res.send(req.body.challenge);
+	}
+
+	if ( req.body.type === 'message' ) {
+		console.log( req.body.text )
 	}
 } );
 
 app.listen(PORT);
 
-console.log(`App listening on port ${POST}`)
+console.log(`App listening on port ${PORT}`)
+
