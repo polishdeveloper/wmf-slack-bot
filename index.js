@@ -51,7 +51,10 @@ app.post('/', (req, res) => {
 		res.send(req.body.challenge);
 		return;
 	}
-	if ( req.body.event.type === 'message' && req.body.event.channel == "C8WM9Q5FS" ) {
+	if ( req.body.event.type === 'message'
+		&& req.body.event.channel == "C8WM9Q5FS"
+		&& !req.body.event.bot_id
+	) {
 		console.log( req.body.event.text )
 
 		var phabIds = lookupPhabIds( req.body.event.text );
