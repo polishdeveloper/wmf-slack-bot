@@ -51,18 +51,18 @@ app.post('/', (req, res) => {
 		res.send(req.body.challenge);
 		return;
 	}
-	if ( req.body.event.type === 'message'
-		&& !req.body.event.bot_id
-	) {
+	var type = req.body.event.type;
+        console.log('Message type: ' + type);
+
+	if ( ( type === 'message' || type === 'link_shared' ) && !req.body.event.bot_id ) {
 		var phabIds = lookupPhabIds( req.body.event.text );
-		if (phabIds ) {
+		console.log('Found phab ids: ', phabIds);
+		if ( phabIds.length > 0 ) {
 			getPhabInfo( phabIds ).then( ticketsData => {
 				var task = ticketsData[phabIds[0]]; //assume only first
-
 				var options = {
 					unfurl_links: false,
-					attachments: [
-						{
+					attachments: [ {
 							"fallback": task.fullName,
 							"title": task.fullName,
 							"title_link": task.uri,
@@ -88,6 +88,8 @@ app.post('/', (req, res) => {
 				})
 				.catch(console.error);
 		  });
+		} else {
+		  console.log(req.body);
 		}
 	}
 	res.sendStatus(200);
