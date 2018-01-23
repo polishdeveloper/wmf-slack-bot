@@ -14,6 +14,8 @@ passport.use(new SlackStrategy({
   }
 ));
 
+app.use(express.json()); // to support JSON-encoded bodies
+
 app.use(passport.initialize());
 app.use(require('body-parser').urlencoded({ extended: true }));
 
@@ -26,10 +28,12 @@ app.get('/auth/slack/callback',
   (req, res) => res.redirect('/')
 );
 
-app.post('/', (req, res) =>{
+app.post('/', (req, res) => {
 	if ( req.body && req.body.challenge ) {
 		res.send(req.body.challenge);
 	}
 } );
 
 app.listen(PORT);
+
+console.log(`App listening on port ${POST}`)
