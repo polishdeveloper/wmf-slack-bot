@@ -18,6 +18,7 @@
   "homepage": "https://github.com/polishdeveloper/wmf-slack-bot#readme",
   "dependencies": {
     "@slack/client": "^3.15.0",
+    "canduit": "github:uber/canduit",
     "express": "^4.16.2",
     "passport": "^0.4.0",
     "passport-slack": "0.0.7"

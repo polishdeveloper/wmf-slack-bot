@@ -1,32 +1,8 @@
-const {CLIENT_ID=1, CLIENT_SECRET=1, PORT=8090} = process.env,
-      SlackStrategy = require('passport-slack').Strategy,
-      passport = require('passport'),
-      express = require('express'),
+const express = require('express'),
       app = express();
 
-// setup the strategy using defaults
-passport.use(new SlackStrategy({
-    clientID: CLIENT_ID,
-    clientSecret: CLIENT_SECRET
-  }, (accessToken, refreshToken, profile, done) => {
-    // optionally persist profile data
-    done(null, profile);
-  }
-));
-
 app.use(express.json()); // to support JSON-encoded bodies
-
-app.use(passport.initialize());
 app.use(require('body-parser').urlencoded({ extended: true }));
-
-// path to start the OAuth flow
-app.get('/auth/slack', passport.authorize('slack'));
-
-// OAuth callback url
-app.get('/auth/slack/callback',
-  passport.authorize('slack', { failureRedirect: '/login' }),
-  (req, res) => res.redirect('/')
-);
 
 function lookupPhabIds( text ) {
 	var idMatches = text.match( /t[0-9]+(\#\w+)?/gi );
@@ -45,15 +21,20 @@ function getPhabInfo( ids ) {
 app.post('/', (req, res) => {
 	// initial url verification
 	if ( req.body && req.body.challenge ) {
+		console.log('Got a challenge request');
 		res.send(req.body.challenge);
+		return;
 	}
+	if ( req.body.event.type === 'message' ) {
+		console.log( req.body.event.text )
 
-	if ( req.body.type === 'message' ) {
-		console.log( req.body.text )
+		var phabIds = lookupPhabIds( req.body.event.text );
+		if (phabIds) {
+		  console.log('Found ', phabIds, '  in message, asking phabricator.');
+		}
 	}
 } );
 
 app.listen(PORT);
-
 console.log(`App listening on port ${PORT}`)
 
