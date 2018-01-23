@@ -52,15 +52,10 @@ app.post('/', (req, res) => {
 		return;
 	}
 	if ( req.body.event.type === 'message'
-		&& req.body.event.channel == "C8WM9Q5FS"
 		&& !req.body.event.bot_id
 	) {
-		console.log( req.body );
-
 		var phabIds = lookupPhabIds( req.body.event.text );
-
 		if (phabIds ) {
-
 			getPhabInfo( phabIds ).then( ticketsData => {
 				var task = ticketsData[phabIds[0]]; //assume only first
 
@@ -88,14 +83,14 @@ app.post('/', (req, res) => {
 
 				// See: https://api.slack.com/methods/chat.postMessage
 				slackClient.chat.postMessage(req.body.event.channel, 'Task details', options)
-				.then((res) => {
-					// `res` contains information about the posted message
-  					console.log('Message sent: ', res);
+				.then(() => {
+  					console.log('Message sent');
 				})
 				.catch(console.error);
 		  });
 		}
 	}
+	res.sendStatus(200);
 } );
 
 app.listen(PORT);
