@@ -9,7 +9,7 @@ app.use(express.json()); // to support JSON-encoded bodies
 app.use(require('body-parser').urlencoded({ extended: true }));
 
 function lookupPhabIds( text ) {
-	return text ? text.match( /t[0-9]+(\#\w+)?/gi ) : [];
+	return text ? text.match( /\ t[0-9]+(\#\w+)?/gi ) : [];
 }
 
 function lookupGerritIds( text ) {
@@ -65,35 +65,71 @@ function getPhabInfo( idsWithComments ) {
 	} );
 }
 
+function handleMessages( messageText ) {
+	var phabIds = lookupPhabIds( messageText );
+	if ( phabIds && phabIds.length > 0 ) {
+		getPhabInfo(phabIds).then(ticketsData => {
+			var task = ticketsData[phabIds[0]]; //assume only first for now
+			slackClient.chat.postMessage(req.body.event.channel, 'Task details', {
+				unfurl_links: false,
+				attachments: [
+					createSlackAttachement(task.fullName, task.uri, {Status: task.status})
+				]
+			}).then(() => {
+				console.log('Message sent');
+			}).catch(console.error);
+		});
+	}
+}
+
+function fetchLinkData(linkData) {
+	return new Promise( (resolve, reject) => {
+		switch(linkData.domain) {
+			case 'gerrit.wikimedia.org':
+				console.log('Fetch gerrit data');
+				resolve( createSlackAttachement( 'Gerrit task', linkData.url, {Verified: '-1', Review: '+2', Status: 'TODO' }));
+				break;
+			case 'phabricator.wikimedia.org':
+				resolve.createSlackAttachement('Phabricator task', linkData.url, {'Status': 'TODO'});
+				break;
+		}
+	});
+}
+
+function handleLinks( event ) {
+	var promises = [];
+
+	event.links.each( linkData => {
+		promises.push(fetchLinkData( linkData ));
+	});
+	Promise.all( promises ).then(( unfurls ) => {
+		slackClient.chat.unfurl(event.ts, event.channel, unfurls);
+	}).catch(error => console.error);
+}
+
+
+
 app.post('/', (req, res) => {
+
 	// initial url verification
 	if ( req.body && req.body.challenge ) {
 		console.log('Got a challenge request');
 		res.send(req.body.challenge);
 		return;
 	}
-	var type = req.body.event.type;
 
-	if ( ( type === 'message' || type === 'link_shared' ) && !req.body.event.bot_id ) {
-		console.log(req.body.event);
-		var phabIds = lookupPhabIds( req.body.event.text );
-		console.log('Found phab ids: ', phabIds);
-		if ( phabIds.length > 0 ) {
-			getPhabInfo( phabIds ).then( ticketsData => {
-				var task = ticketsData[phabIds[0]]; //assume only first
-				slackClient.chat.postMessage(req.body.event.channel, 'Task details', {
-					unfurl_links: false,
-					attachments: [
-						createSlackAttachement( task.fullName, task.uri, { Status: task.status})
-					]
-				}).then(() => {
-					console.log('Message sent');
-				}).catch(console.error);
-		  });
-		}
+	switch(req.body.event.type) {
+		case 'link_shared':
+			handleLinks( req.body.event );
+			break;
+		case 'message':
+			handleMessages(req.body.event.text);
+			break;
+		default:
+			// do nothing
 	}
-
 	res.sendStatus(200);
+
 } );
 
 app.listen(PORT);
