@@ -1,11 +1,16 @@
 const PORT = 8090,
       express = require('express'),
-      app = express();
+      app = express(),
+      createCanduit = require('canduit');
+
+
 
 app.use(express.json()); // to support JSON-encoded bodies
 app.use(require('body-parser').urlencoded({ extended: true }));
 
 function lookupPhabIds( text ) {
+	if (text === undefined)
+		return [];
 	var idMatches = text.match( /t[0-9]+(\#\w+)?/gi );
 	return idMatches;
 }
@@ -15,8 +20,24 @@ function lookupGerritIds( text ) {
 }
 function getPhabInfo( ids ) {
 	return new Promise( (resolve, reject ) => {
-
-	} )
+           createCanduit({
+	       'api': 'https://phabricator.wikimedia.org/api/'
+	   }, (err, canduit) => {
+              if (err) {
+		      console.log(err);
+		      reject(err);
+	      } else {
+	      	canduit.exec('phid.query', { phids: ids }, ( queryErr, tasks ) => {
+		  if (queryErr) {
+			  console.log(queryErr);
+			  reject(queryErr);
+		  }
+			console.log(tasks);
+			resolve(tasks);
+		} );
+	      }
+	   });
+	} );
 }
 
 app.post('/', (req, res) => {
