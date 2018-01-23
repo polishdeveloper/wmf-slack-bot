@@ -1,10 +1,9 @@
-const PORT = 8090,
-      express = require('express'),
-      app = express(),
-	  createCanduit = require('canduit'),
-	  { WebClient:SlackClient } = require('@slack/client'),
-	  slackToken = "xoxp-2155697888-23783382054-302812961136-181d8feb9ef47f690ebe731a0a9abccf", //testing token
-	  slackClient = new SlackClient(slackToken);
+const { PORT = 8090, SLACK_TOKEN = '', PHABRICATOR_TOKEN = ''} = process.env
+	express = require('express'),
+	app = express(),
+	createCanduit = require('canduit'),
+	{ WebClient:SlackClient } = require('@slack/client'),
+	slackClient = new SlackClient(SLACK_TOKEN);
 
 app.use(express.json()); // to support JSON-encoded bodies
 app.use(require('body-parser').urlencoded({ extended: true }));
@@ -29,7 +28,7 @@ function getPhabInfo( idsWithComments ) {
 	return new Promise( (resolve, reject ) => {
 		createCanduit({
 			api: 'https://phabricator.wikimedia.org/api/',
-			token: 'api-po3fqfgnn6jtqdltfb3zhd7owcb3'
+			token: PHABRICATOR_TOKEN
 		}, (err, canduit) => {
 			if (err) {
 				reject(err);
