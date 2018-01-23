@@ -18,25 +18,29 @@ function lookupPhabIds( text ) {
 function lookupGerritIds( text ) {
 	return [];
 }
-function getPhabInfo( ids ) {
+function getPhabInfo( idsWithComments ) {
+	var ids = [];
+	ids = idsWithComments.map( (ticket) => {
+		var parts = ticket.split('#');
+		return parts[0]
+	});
+
 	return new Promise( (resolve, reject ) => {
-           createCanduit({
-	       'api': 'https://phabricator.wikimedia.org/api/'
-	   }, (err, canduit) => {
-              if (err) {
-		      console.log(err);
-		      reject(err);
-	      } else {
-	      	canduit.exec('phid.query', { phids: ids }, ( queryErr, tasks ) => {
-		  if (queryErr) {
-			  console.log(queryErr);
-			  reject(queryErr);
-		  }
-			console.log(tasks);
-			resolve(tasks);
-		} );
-	      }
-	   });
+		createCanduit({
+			api: 'https://phabricator.wikimedia.org/api/',
+			token: 'api-po3fqfgnn6jtqdltfb3zhd7owcb3'
+		}, (err, canduit) => {
+			if (err) {
+				reject(err);
+			} else {
+				canduit.exec('phid.lookup', { names: ids }, ( queryErr, tasks ) => {
+					if (queryErr) {
+						reject(queryErr);
+					}
+					resolve(tasks);
+				} );
+			}
+		});
 	} );
 }
 
@@ -52,11 +56,12 @@ app.post('/', (req, res) => {
 
 		var phabIds = lookupPhabIds( req.body.event.text );
 		if (phabIds) {
-		  console.log('Found ', phabIds, '  in message, asking phabricator.');
+			getPhabInfo( phabIds ).then( ticketsData => {
+		    	//post slack messages
+		  });
 		}
 	}
 } );
 
 app.listen(PORT);
-console.log(`App listening on port ${PORT}`)
-
+console.log(`App listening on port ${PORT}`);
