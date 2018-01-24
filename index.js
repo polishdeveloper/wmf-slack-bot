@@ -16,8 +16,28 @@ function lookupGerritIds( text ) {
 	return [];
 }
 
-function createSlackAttachment(title, uri, fields) {
-	var attachment = {
+function createFieldsObject(fields) {
+	var output = [];
+	for( var key in fields ) {
+		if (fields.hasOwnProperty(key)) {
+			output.push({
+				"title": key,
+				"value": fields[key],
+				"short": true
+			});
+		};
+	}
+	return output;
+}
+
+function createLinkAttachment(title, fields) {
+	return {
+		text: title,
+		fields: fields
+	}
+}
+function createMessageAttachment(title, uri, fields) {
+	return {
 		fallback: title,
 		title: title,
 		title_link: uri,
@@ -25,19 +45,8 @@ function createSlackAttachment(title, uri, fields) {
 //		image_url": "https://phab.wmfusercontent.org/file/data/s37v4uvxvzwnsdpsmdux/PHID-FILE-vkbuqfcvjokm45fb6a6q/Screen_Shot_2017-12-19_at_6.23.33_PM.png",
 		footer: "Have a phabtastic day!",
 		footer_icon: "https://phab.wmfusercontent.org/res/phabricator/adb05a97/rsrc/favicons/apple-touch-icon-76x76.png",
-		fields: []
+		fields: createFieldsObject( fields )
 	};
-	for( var key in fields ) {
-		if (fields.hasOwnProperty(key)) {
-			attachment.fields.push({
-				"title": key,
-				"value": fields[key],
-				"short": true
-			});
-		};
-	}
-	console.log(attachment);
-	return attachment;
 }
 
 function getPhabInfo( idsWithComments ) {
@@ -78,7 +87,7 @@ function handleMessages( event ) {
 				for( var key in ticketsData) {
 					if (ticketsData.hasOwnProperty(key)) {
 						var ticket = ticketsData[key];
-						attachments.push(createSlackAttachment(ticket.fullName, ticket.uri, {Status: ticket.status}));
+						attachments.push(createMessageAttachment(ticket.fullName, ticket.uri, {Status: ticket.status}));
 					}
 				}
 			} catch( e) { console.log(e); }
@@ -98,11 +107,11 @@ function fetchLinkData(linkData) {
 		switch(linkData.domain) {
 			case 'gerrit.wikimedia.org':
 				console.log('Fetch gerrit data');
-				resolve( createSlackAttachement( 'Gerrit task', linkData.url, {Verified: '-1', Review: '+2', Status: 'TODO' }));
+				resolve( createLinkAttachment( 'Gerrit task', {Verified: '-1', Review: '+2', Status: 'TODO' }));
 				break;
 			case 'phabricator.wikimedia.org':
 				console.log('Fetch phab data');
-				resolve(createSlackAttachement('Phabricator task', linkData.url, {'Status': 'TODO'}));
+				resolve(createLinkAttachment('Phabricator task', {'Status': 'TODO'}));
 				break;
 			default:
 				console.log('Unknown domain ' + linkData.domain);
@@ -128,10 +137,7 @@ function handleLinks( event ) {
 	}).catch(error => console.error);
 }
 
-
-
 app.post('/', (req, res) => {
-
 	// initial url verification
 	if ( req.body && req.body.challenge ) {
 		console.log('Got a challenge request');
@@ -150,7 +156,6 @@ app.post('/', (req, res) => {
 			// do nothing
 	}
 	res.sendStatus(200);
-
 } );
 
 app.listen(PORT);
