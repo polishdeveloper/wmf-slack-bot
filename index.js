@@ -9,14 +9,14 @@ app.use(express.json()); // to support JSON-encoded bodies
 app.use(require('body-parser').urlencoded({ extended: true }));
 
 function lookupPhabIds( text ) {
-	return text ? text.match( /\ t[0-9]+(\#\w+)?/gi ) : [];
+	return text ? text.match( /t[0-9]+(\#\w+)?/gi ) : [];
 }
 
 function lookupGerritIds( text ) {
 	return [];
 }
 
-function createSlackAttachement(title, uri, fields) {
+function createSlackAttachment(title, uri, fields) {
 	var attachment = {
 		fallback: title,
 		title: title,
@@ -36,6 +36,7 @@ function createSlackAttachement(title, uri, fields) {
 			});
 		};
 	}
+	console.log(attachment);
 	return attachment;
 }
 
@@ -45,7 +46,6 @@ function getPhabInfo( idsWithComments ) {
 		var parts = ticket.split('#');
 		return parts[0]
 	});
-
 	return new Promise( (resolve, reject ) => {
 		createCanduit({
 			api: 'https://phabricator.wikimedia.org/api/',
@@ -65,45 +65,66 @@ function getPhabInfo( idsWithComments ) {
 	} );
 }
 
-function handleMessages( messageText ) {
-	var phabIds = lookupPhabIds( messageText );
+function handleMessages( event ) {
+	if (!event.text) {
+		console.log('Empty message, skip');
+		return;
+	}
+	var phabIds = lookupPhabIds( event.text );
 	if ( phabIds && phabIds.length > 0 ) {
 		getPhabInfo(phabIds).then(ticketsData => {
-			var task = ticketsData[phabIds[0]]; //assume only first for now
-			slackClient.chat.postMessage(req.body.event.channel, 'Task details', {
+			var attachments = [];
+			try {
+				for( var key in ticketsData) {
+					if (ticketsData.hasOwnProperty(key)) {
+						var ticket = ticketsData[key];
+						attachments.push(createSlackAttachment(ticket.fullName, ticket.uri, {Status: ticket.status}));
+					}
+				}
+			} catch( e) { console.log(e); }
+			slackClient.chat.postMessage( event.channel, '', {
 				unfurl_links: false,
-				attachments: [
-					createSlackAttachement(task.fullName, task.uri, {Status: task.status})
-				]
+				attachments: attachments
 			}).then(() => {
 				console.log('Message sent');
 			}).catch(console.error);
-		});
+		}).catch(error=>console.error);
 	}
 }
 
 function fetchLinkData(linkData) {
 	return new Promise( (resolve, reject) => {
+		console.log('Trying to fetch data for ', linkData);
 		switch(linkData.domain) {
 			case 'gerrit.wikimedia.org':
 				console.log('Fetch gerrit data');
 				resolve( createSlackAttachement( 'Gerrit task', linkData.url, {Verified: '-1', Review: '+2', Status: 'TODO' }));
 				break;
 			case 'phabricator.wikimedia.org':
-				resolve.createSlackAttachement('Phabricator task', linkData.url, {'Status': 'TODO'});
+				console.log('Fetch phab data');
+				resolve(createSlackAttachement('Phabricator task', linkData.url, {'Status': 'TODO'}));
 				break;
+			default:
+				console.log('Unknown domain ' + linkData.domain);
+				reject('Unknown domain ' + linkData.domain);
+
 		}
 	});
 }
 
 function handleLinks( event ) {
 	var promises = [];
-
-	event.links.each( linkData => {
-		promises.push(fetchLinkData( linkData ));
+	event.links.forEach( linkToUnfurl => {
+		promises.push(fetchLinkData( linkToUnfurl ));
 	});
 	Promise.all( promises ).then(( unfurls ) => {
-		slackClient.chat.unfurl(event.ts, event.channel, unfurls);
+		console.log('All attachments', unfurls);
+		var links = [];
+		unfurls.forEach((linkData) => {
+		    links[linkData.title_link] = linkData;
+		});
+		console.log('Unfurling urls: ', links);
+		slackClient.chat.unfurl(event.message_ts, event.channel, links);
 	}).catch(error => console.error);
 }
 
@@ -123,7 +144,7 @@ app.post('/', (req, res) => {
 			handleLinks( req.body.event );
 			break;
 		case 'message':
-			handleMessages(req.body.event.text);
+			handleMessages(req.body.event);
 			break;
 		default:
 			// do nothing
